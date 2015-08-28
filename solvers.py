@@ -1,7 +1,7 @@
 __author__ = 'Luke'
 
 import numpy as np
-from mesh import solve_momentum, solve_pressure_poisson
+from mesh import solve_stokes_momentum, solve_pressure_poisson
 
 def apply_boundary_conditions(u, v, p):
     # Left wall
@@ -62,7 +62,7 @@ def solve_flow(u, v, dt, dx, dy, p, rho, nu, nit):
         vn = v.copy()
 
         p = solve_pressure_poisson(p, rho, dx, dy, dt, u, v, nit)
-        u, v = solve_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu)
+        u, v = solve_stokes_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu)
 
         u, v, p = apply_boundary_conditions(u, v, p)
 

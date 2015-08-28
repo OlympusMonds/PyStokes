@@ -22,6 +22,7 @@ plt.ylim(0, 2.)
 
 def main():
     output_path = "D:\PyStokes\low_contrast"
+    output_path = "/home/luke/Working Grounds/PyStokes/low_contrast"
     output_time_interval = 0.1
     output_timestep_interval = 1000
     logging = False
@@ -35,7 +36,7 @@ def main():
     dy = (ymax - ymin) / (ny - 1)
 
     dt = 0.0001
-    nt = 5000
+    nt = 50000
     max_time = 20.
     nit = 50
 
