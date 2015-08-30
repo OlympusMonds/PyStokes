@@ -13,9 +13,9 @@ def generate_temporal_vtk(output_path):
         group.save()
 
 
-def write_mesh(output_path, timestep, dx, dy, point_data, mesh_group, current_time):
+def write_mesh(output_path, timestep, domain, point_data, mesh_group, current_time):
     mpath = imageToVTK("{}/mesh{:04d}".format(output_path, timestep),
-                       spacing = (dx,dy,1.0),
+                       spacing = (domain["dx"], domain["dy"], 1.0),
                        pointData = point_data)
     mesh_group.addFile(filepath = mpath, sim_time = current_time)
 

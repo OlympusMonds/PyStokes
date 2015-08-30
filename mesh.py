@@ -3,66 +3,16 @@ __author__ = 'Luke'
 import numpy as np
 
 
-def solve_pressure_poisson(p, rho, dx, dy, dt, u, v, nit):
-    b = np.empty_like(p)
-    b[1:-1, 1:-1] = 1/dt * \
-                    (
-                     ((u[1:-1, 2:] - u[1:-1, :-2]) / (2*dx)) +
-                     ((v[2:, 1:-1] - v[:-2, 1:-1]) / (2*dy))
-                    ) - \
-                    ((u[1:-1, 2:] - u[1:-1, :-2])/(2*dx))**2 - \
-                    2 * \
-                    (((u[2: ,1:-1] - u[:-2, 1:-1])/(2*dy)) *
-                     ((v[1:-1, 2:] - v[1:-1, :-2])/(2*dx))) - \
-                    ((v[2:, 1:-1] - v[:-2, 1:-1])/(2*dy))**2
+def create_domain(domain):
+    domain["dx"] = (domain["xmax"] - domain["xmin"]) / (domain["nx"] - 1)
+    domain["dy"] = (domain["ymax"] - domain["ymin"]) / (domain["ny"] - 1)
 
-    # Non-p dependant terms
-    dx2 = dx * dx
-    dy2 = dy * dy
-    part2 = ((rho * dx2 * dy2) / (2 * (dx2 + dy2))) * b[1:-1,1:-1]
+    domain["x"] = np.linspace(domain["xmax"], domain["xmin"], domain["nx"])
+    domain["y"] = np.linspace(domain["ymax"], domain["ymin"], domain["ny"])
+    domain["grid"] = np.meshgrid(domain["x"], domain["y"])
 
-    for its in range(nit):
-        pn = p.copy()
-        p[1:-1,1:-1] = ((pn[1:-1,2:] + pn[1:-1,:-2]) * dy2 + (pn[2:,1:-1] + pn[:-2,1:-1]) * dx2 ) / \
-                       (2 * (dx2 + dy2)) - part2
-
-        p[0,:] = p[1,:]    # dp/dy = 0 at y = 0
-        p[-1,:] = p[-2,:]  # dp/dy = 0 at y = 2
-        p[:,0] = p[:,1]    # dp/dx = 0 at x = 0
-        p[:,-1] = p[:,-2]  # dp/dx = 0 at x = 2
-
-    return p
+    return domain
 
 
-def solve_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu):
-    u[1:-1,1:-1] = un[1:-1,1:-1] - \
-                   un[1:-1,1:-1] * (dt / dx) * (un[1:-1,1:-1] - un[1:-1,:-2]) - \
-                   vn[1:-1,1:-1] * (dt / dy) * (un[1:-1,1:-1] - un[:-2,1:-1]) - \
-                   (dt / (rho * 2 * dx)) * (p[1:-1,2:] - p[1:-1,:-2]) + \
-                   nu[1:-1,1:-1] * (((dt/dx**2) * (un[1:-1,2:] - 2*un[1:-1,1:-1] + un[1:-1,:-2])) +
-                                    ((dt/dy**2) * (un[2:,1:-1] - 2*un[1:-1,1:-1] + un[:-2,1:-1]))
-                                   )
-
-    v[1:-1,1:-1] = vn[1:-1,1:-1] - \
-                   un[1:-1,1:-1] * (dt / dx) * (vn[1:-1,1:-1] - vn[1:-1,:-2]) - \
-                   vn[1:-1,1:-1] * (dt / dy) * (vn[1:-1,1:-1] - vn[:-2,1:-1]) - \
-                   (dt / (rho * 2 * dy)) * (p[2:,1:-1] - p[:-2,1:-1]) + \
-                   nu[1:-1,1:-1] * (((dt/dx**2) * (vn[1:-1,2:] - 2*vn[1:-1,1:-1] + vn[1:-1,:-2])) +
-                                    ((dt/dy**2) * (vn[2:,1:-1] - 2*vn[1:-1,1:-1] + vn[:-2,1:-1]))
-                                   )
-    return u, v
-
-
-def solve_stokes_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu):
-    u[1:-1,1:-1] = un[1:-1,1:-1] - \
-                   (dt / (rho * 2 * dx)) * (p[1:-1,2:] - p[1:-1,:-2]) + \
-                   nu[1:-1,1:-1] * (((dt/dx**2) * (un[1:-1,2:] - 2*un[1:-1,1:-1] + un[1:-1,:-2])) +
-                                    ((dt/dy**2) * (un[2:,1:-1] - 2*un[1:-1,1:-1] + un[:-2,1:-1]))
-                                   )
-
-    v[1:-1,1:-1] = vn[1:-1,1:-1] - \
-                   (dt / (rho * 2 * dy)) * (p[2:,1:-1] - p[:-2,1:-1]) + \
-                   nu[1:-1,1:-1] * (((dt/dx**2) * (vn[1:-1,2:] - 2*vn[1:-1,1:-1] + vn[1:-1,:-2])) +
-                                    ((dt/dy**2) * (vn[2:,1:-1] - 2*vn[1:-1,1:-1] + vn[:-2,1:-1]))
-                                   )
-    return u, v
+def create_variable_mesh(domain):
+    return np.zeros((domain["ny"], domain["nx"]), dtype=np.float64)

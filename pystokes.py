@@ -5,6 +5,7 @@ import numpy as np
 import sys
 from pyevtk.hl import VtkGroup
 
+from mesh import create_domain, create_variable_mesh
 from particles import *
 from helpers import calc_dt, interp_particles_to_mesh
 from solvers import solve_flow
@@ -22,38 +23,28 @@ plt.ylim(0, 2.)
 
 def main():
     output_path = "D:\PyStokes\low_contrast"
-    output_path = "/home/luke/Working Grounds/PyStokes/low_contrast"
+    #output_path = "/home/luke/Working Grounds/PyStokes/low_contrast"
     output_time_interval = 0.1
     output_timestep_interval = 1000
     logging = False
 
-    xmin, xmax = 0., 2.
-    ymin, ymax = 0., 2.
+    domain = {"xmin": 0., "xmax": 2., "nx": 41,
+              "ymin": 0., "ymax": 2., "ny": 41}
+    domain = create_domain(domain)
 
-    nx, ny = 41, 41
-
-    dx = (xmax - xmin) / (nx - 1)
-    dy = (ymax - ymin) / (ny - 1)
-
-    dt = 0.0001
+    dt = 0.001
     nt = 50000
-    max_time = 20.
+    max_time = 20e6
     nit = 50
 
-    c = 1
-
-    x = np.linspace(xmin, xmax, nx)
-    y = np.linspace(ymin, ymax, ny)
-    X,Y = np.meshgrid(x, y)
-
+    c = 0.01
     rho = 1
 
-    u = np.zeros((ny, nx))
-    v = np.zeros((ny, nx))
-    p = np.zeros((ny, nx))
-    b = np.zeros((ny, nx))
+    u = create_variable_mesh(domain)
+    v = create_variable_mesh(domain)
+    p = create_variable_mesh(domain)
 
-    particles = generate_particles(nx, ny)
+    particles = generate_particles(domain)
 
     timestep = 0
     current_time = 0
@@ -63,26 +54,26 @@ def main():
 
     while timestep < nt and current_time < max_time:
         print current_time,
-        nu = interp_particles_to_mesh(particles, X, Y)
+        nu = interp_particles_to_mesh(particles, domain)
 
-        u, v, p = solve_flow(u, v, dt, dx, dy, p, rho, nu, nit)
+        u, v, p = solve_flow(u, v, dt, p, rho, nu, nit, domain)
         p -= np.min(p)  # set min pressure to be 0
 
-        dt = calc_dt(0.01, u, v, dx, dy)
+        dt = calc_dt(c, u, v, domain)
         current_time += dt
         dt_since_output += dt
 
         # Interpolate velocities back to particles
-        particles = interp_mesh_to_particles(particles, u, v, dx, dy)
+        particles = interp_mesh_to_particles(particles, u, v, domain)
 
         # Advect particles
-        particles = advect_particles_rk2(dt, particles, xmin, xmax, ymin, ymax, u, v, dx, dy)
+        particles = advect_particles_rk2(dt, particles, u, v, domain)
 
         if timestep % output_timestep_interval == 0 or dt_since_output > output_time_interval:
             point_data = {"visc" : nu[:,:,np.newaxis],
                           "u" : u[:,:,np.newaxis],
                           "v" : v[:,:,np.newaxis]}
-            write_mesh(output_path, timestep, dx, dy, point_data, mesh_group, current_time)
+            write_mesh(output_path, timestep, domain, point_data, mesh_group, current_time)
             write_particles(output_path, timestep, particles, particles_group, current_time)
 
             dt_since_output = 0
