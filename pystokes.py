@@ -32,13 +32,15 @@ def main():
               "ymin": 0., "ymax": 2., "ny": 41}
     domain = create_domain(domain)
 
-    dt = 0.001
+    domain["gravity"] = [0., -1.]
+
+    dt = 0.0001
     nt = 50000
-    max_time = 20e6
+    max_time = 20
     nit = 50
 
     c = 0.01
-    rho = 1
+    rho = 1.
 
     u = create_variable_mesh(domain)
     v = create_variable_mesh(domain)

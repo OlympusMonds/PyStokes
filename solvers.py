@@ -12,6 +12,7 @@ def solve_pressure_poisson(p, rho, dx, dy, dt, u, v, nit):
     u_in1_j = u[1:-1, :-2]
     u_i_j1 =  u[2:, 1:-1]
     u_i_jn1 = u[:-2, 1:-1]
+
     v_i_j1 =  v[2:, 1:-1]
     v_i_jn1 = v[:-2, 1:-1]
     v_i1_j =  v[1:-1, 2:]
@@ -61,21 +62,33 @@ def solve_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu):
     return u, v
 
 
-def solve_stokes_momentum(u, v, p, un, vn, dt, dx, dy, rho, nu):
-    dx2 = dx**2
-    dy2 = dy**2
-    un_i_j = un[1:-1,1:-1]
-    u[1:-1,1:-1] = un_i_j - \
-                   (dt / (rho * 2 * dx)) * (p[1:-1,2:] - p[1:-1,:-2]) + \
-                   nu[1:-1,1:-1] * (((dt/dx2) * (un[1:-1,2:] - 2.*un_i_j + un[1:-1,:-2])) +
-                                    ((dt/dy2) * (un[2:,1:-1] - 2.*un_i_j + un[:-2,1:-1]))
-                                   )
+def solve_stokes_momentum(u, v, p, F, un, vn, dt, dx, dy, rho, nu):
+    un_i_j =   un[1:-1, 1:-1]
+    un_i1_j =  un[1:-1, 2:]
+    un_in1_j = un[1:-1, :-2]
+    un_i_j1 =  un[2:, 1:-1]
+    un_i_jn1 = un[:-2, 1:-1]
 
-    v[1:-1,1:-1] = vn[1:-1,1:-1] - \
-                   (dt / (rho * 2 * dy)) * (p[2:,1:-1] - p[:-2,1:-1]) + \
-                   nu[1:-1,1:-1] * (((dt/dx2) * (vn[1:-1,2:] - 2*vn[1:-1,1:-1] + vn[1:-1,:-2])) +
-                                    ((dt/dy2) * (vn[2:,1:-1] - 2*vn[1:-1,1:-1] + vn[:-2,1:-1]))
-                                   )
+    vn_i_j =   vn[1:-1, 1:-1]
+    vn_i1_j =  vn[1:-1, 2:]
+    vn_in1_j = vn[1:-1, :-2]
+    vn_i_j1 =  vn[2:, 1:-1]
+    vn_i_jn1 = vn[:-2, 1:-1]
+
+    p_i1_j = p[1:-1,2:]
+    p_in1_j = p[1:-1,:-2]
+
+    nu_i_j = nu[1:-1,1:-1]
+
+    u[1:-1,1:-1] = un_i_j - (dt / (rho * 2. * dx)) * (p_i1_j - p_in1_j) + \
+                   nu_i_j * ((dt / dx) * (un_i1_j - 2.*un_i_j + un_in1_j) +
+                             (dt / dy) * (un_i_j1 - 2.*un_i_j + un_i_jn1)) + \
+                   F[0] * dt
+
+    v[1:-1,1:-1] = vn_i_j - (dt / (rho * 2. * dx)) * (p_i1_j - p_in1_j) + \
+                   nu_i_j * ((dt / dx) * (vn_i1_j - 2.*vn_i_j + vn_in1_j) +
+                             (dt / dy) * (vn_i_j1 - 2.*vn_i_j + vn_i_jn1)) + \
+                   F[1] * dt
     return u, v
 
 
@@ -92,34 +105,34 @@ def apply_boundary_conditions(u, v, p):
 
     # Apply boundary conditions
     # Bottom wall
-    u[0,1:-2] = -0.01
+    u[0,1:-2] = -1
     v[0,1:-2] = 0
 
     # Top wall
-    u[-1,1:-2] = 0.01
+    u[-1,1:-2] = 1
     v[-1,1:-2] = 0
 
 
     # Internal BC
-    #u[21,10:21] = -0.5
+    u[21,10:21] = -0.5
 
     # Corner BCs
 
     # Bottom left
-    #u[0, 0] = 0
-    #v[0, 0] = 0.5
+    u[0, 0] = 0
+    v[0, 0] = 0.5
 
     # Bottom right
-    #u[0, -1] = -0.5
-    #v[0, -1] = 0
+    u[0, -1] = -0.5
+    v[0, -1] = 0
 
     # Top left
-    #u[-1, 0] = 0.5
-    #v[-1, 0] = 0
+    u[-1, 0] = 0.5
+    v[-1, 0] = 0
 
     # Top right
-    #u[-1, -1] = 0
-    #v[-1, -1] = -0.5
+    u[-1, -1] = 0
+    v[-1, -1] = -0.5
 
     return u, v, p
 
@@ -134,10 +147,25 @@ def solve_flow(u, v, dt, p, rho, nu, nit, domain):
         if stepcount >= 5000:
             break
 
+        if np.any(np.isnan(u)):
+            print "u nan"
+            print stepcount
+            sys.exit()
+        if np.any(np.isnan(v)):
+            print "v nan"
+            sys.exit()
+        if np.any(np.isnan(p)):
+            print "p nan"
+            sys.exit()
+
         un = u.copy()
         vn = v.copy()
+
+        if np.abs(u).max() > 1.:
+            print stepcount
+
         p = solve_pressure_poisson(p, rho, domain["dx"], domain["dy"], dt, u, v, nit)
-        u, v = solve_stokes_momentum(u, v, p, un, vn, dt, domain["dx"], domain["dy"], rho, nu)
+        u, v = solve_stokes_momentum(u, v, p, domain["gravity"], un, vn, dt, domain["dx"], domain["dy"], rho, nu)
 
         u, v, p = apply_boundary_conditions(u, v, p)
 

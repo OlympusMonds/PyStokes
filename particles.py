@@ -15,7 +15,7 @@ def generate_particles(domain, particles_per_cell = 30, seed = 112):
         xy = xy * 2  # This needs to be xmax and xmin, because the sobol returns from 0 - 1.
 
         # Custom rheology
-        visc = 0.1 if xy[0] > 1. else 0.05
+        visc = 0.1 if xy[0] > 1. else 0.5
 
         particles.append([xy[0], xy[1], visc, 0., 0.])
 
